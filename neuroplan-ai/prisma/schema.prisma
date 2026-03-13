@@ -1,0 +1,28 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Topic {
+  id               String   @id @default(uuid())
+  title            String
+  easinessFactor   Float    @default(2.5)
+  interval         Int      @default(0)
+  repetitions      Int      @default(0)
+  nextReviewDate   DateTime @default(now())
+  logs             ReviewLog[]
+}
+
+model ReviewLog {
+  id           String   @id @default(uuid())
+  topicId      String
+  topic        Topic    @relation(fields: [topicId], references: [id])
+  qualityScore Int
+  createdAt    DateTime @default(now())
+}
