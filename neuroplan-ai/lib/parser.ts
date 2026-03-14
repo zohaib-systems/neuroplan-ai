@@ -1,13 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { config } from "./config";
+import { env } from "./config";
 import { SYLLABUS_PARSER_PROMPT } from "./prompts";
 import { SyllabusResponseSchema } from "./validations/syllabus"; // Import the guardrail
 
-const genAI = new GoogleGenerativeAI(config.aiKey!);
+const genAI = new GoogleGenerativeAI(env.AI_KEY);
 
 export async function parseSyllabus(rawText: string) {
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
+    model: env.AI_MODEL,
     generationConfig: { responseMimeType: "application/json" } 
   });
 
