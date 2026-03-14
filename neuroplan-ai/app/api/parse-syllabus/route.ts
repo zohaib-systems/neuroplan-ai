@@ -24,12 +24,23 @@ export async function POST(req: Request) {
     // 3. Send the clean JSON back to your Frontend (SyllabusReview.tsx)
     return NextResponse.json(structuredData);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Syllabus API Error:", error);
+    const status =
+      typeof error === "object" &&
+      error !== null &&
+      typeof (error as { status?: unknown }).status === "number"
+        ? ((error as { status?: number }).status ?? 500)
+        : 500;
+
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to process syllabus";
     
     return NextResponse.json(
-      { error: error.message || "Failed to process syllabus" }, 
-      { status: 500 }
+      { error: message }, 
+      { status }
     );
   }
 }

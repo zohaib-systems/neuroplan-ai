@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
+import { SyllabusData } from "@/lib/validations/syllabus";
 
 interface UploadProps {
-  onComplete: (data: any) => void;
+  onComplete: (data: SyllabusData) => void;
 }
 
 export default function SyllabusUpload({ onComplete }: UploadProps) {
@@ -27,14 +28,28 @@ export default function SyllabusUpload({ onComplete }: UploadProps) {
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to parse syllabus");
+      if (!response.ok) {
+        let message = "Failed to parse syllabus";
+        try {
+          const errorPayload = await response.json();
+          if (typeof errorPayload?.error === "string" && errorPayload.error.trim()) {
+            message = errorPayload.error;
+          }
+        } catch {
+          // Keep fallback message when response is not JSON
+        }
+        throw new Error(message);
+      }
 
-      const data = await response.json();
+      const data: SyllabusData = await response.json();
       
       // Pass the AI-structured data back up to the Page component
       onComplete(data);
-    } catch (err) {
-      setError("Something went wrong. Please ensure your API key is set up.");
+    } catch (err: unknown) {
+      const message = err instanceof Error
+        ? err.message
+        : "Something went wrong while parsing your syllabus.";
+      setError(message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -46,11 +61,15 @@ export default function SyllabusUpload({ onComplete }: UploadProps) {
       <div className={`relative border-2 border-dashed rounded-2xl p-12 transition-all ${
         loading ? "border-blue-400 bg-blue-50" : "border-slate-300 hover:border-blue-400"
       }`}>
+        <label htmlFor="file-upload" className="sr-only">
+          Upload syllabus file
+        </label>
         <input
           type="file"
           onChange={handleFileUpload}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
           id="file-upload"
+          aria-label="Upload syllabus file"
           disabled={loading}
           accept=".pdf,.txt"
         />

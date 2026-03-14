@@ -2,9 +2,10 @@
 import { useState } from "react";
 import SyllabusUpload from "@/components/SyllabusUpload";
 import SyllabusReview from "@/components/SyllabusReview";
+import { SyllabusData } from "@/lib/validations/syllabus";
 
 export default function Home() {
-  const [parsedData, setParsedData] = useState(null);
+  const [parsedData, setParsedData] = useState<SyllabusData | null>(null);
 
   return (
     <main className="max-w-4xl mx-auto py-12 px-4">
