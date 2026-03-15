@@ -12,6 +12,8 @@ generator client {
 model Topic {
   id               String   @id @default(uuid())
   title            String
+  description      String   @default("")
+  difficulty       Int      @default(3)
   easinessFactor   Float    @default(2.5)
   interval         Int      @default(0)
   repetitions      Int      @default(0)

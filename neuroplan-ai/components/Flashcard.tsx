@@ -26,7 +26,7 @@ export default function Flashcard({ front, back, topicId, onReviewSaved }: Flash
     setReviewError(null);
 
     try {
-      const res = await fetch("/api/review-card", {
+      const res = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topicId, score }),

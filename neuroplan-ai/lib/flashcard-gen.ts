@@ -1,7 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
-import type { Topic } from "@prisma/client";
 import { env } from "./config";
+
+type TopicForFlashcards = {
+  title: string;
+  description: string;
+};
 
 type FlashcardGenError = Error & { status?: number };
 
@@ -10,7 +14,7 @@ const FlashcardSchema = z.object({
   back: z.string().min(1, "Flashcard back cannot be empty"),
 });
 
-const FlashcardsResponseSchema = z.array(FlashcardSchema).length(3);
+const FlashcardsResponseSchema = z.array(FlashcardSchema).min(3).max(5);
 
 export type GeneratedFlashcard = z.infer<typeof FlashcardSchema>;
 
@@ -41,7 +45,7 @@ function parseJsonResponse(text: string): unknown {
   return JSON.parse(trimmed);
 }
 
-export async function generateFlashcardsForTopic(topic: Topic): Promise<GeneratedFlashcard[]> {
+export async function generateFlashcardsForTopic(topic: TopicForFlashcards): Promise<GeneratedFlashcard[]> {
   if (!env.AI_KEY) {
     const missingKeyError = new Error(
       "Missing GEMINI_API_KEY. Add it to your .env file and restart the dev server."
@@ -52,18 +56,19 @@ export async function generateFlashcardsForTopic(topic: Topic): Promise<Generate
 
   const genAI = new GoogleGenerativeAI(env.AI_KEY);
   const model = genAI.getGenerativeModel({
-    model: env.AI_MODEL,
+    model: "gemini-1.5-flash",
     generationConfig: { responseMimeType: "application/json" },
   });
 
   const prompt = `You are an expert tutor and instructional designer.
-Generate exactly 3 high-quality flashcards for the topic below.
+Generate 3 to 5 high-quality flashcards for the topic below.
 
 Topic title: ${topic.title}
+Topic description: ${topic.description}
 
 Rules:
 1. Return ONLY valid JSON.
-2. The JSON must be an array with exactly 3 objects.
+2. The JSON must be an array with 3 to 5 objects.
 3. Each object must have string fields: "front" and "back".
 4. "front" should be a clear question or recall prompt.
 5. "back" should be concise, correct, and useful for active recall.
