@@ -17,6 +17,7 @@ model Topic {
   repetitions      Int      @default(0)
   nextReviewDate   DateTime @default(now())
   logs             ReviewLog[]
+  flashcards       Flashcard[]
 }
 
 model ReviewLog {
@@ -25,4 +26,13 @@ model ReviewLog {
   topic        Topic    @relation(fields: [topicId], references: [id])
   qualityScore Int
   createdAt    DateTime @default(now())
+}
+
+model Flashcard {
+  id        String   @id @default(uuid())
+  topicId   String
+  topic     Topic    @relation(fields: [topicId], references: [id])
+  front     String
+  back      String
+  createdAt DateTime @default(now())
 }
