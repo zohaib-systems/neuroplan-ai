@@ -21,7 +21,12 @@ export default function Flashcard({ front, back, topicId, onReviewSaved }: Flash
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
-  const submitReview = async (score: number) => {
+  const submitReview = async (rating: 1 | 2 | 3 | 4 | 5) => {
+    if (!isFlipped) {
+      setReviewError("Flip the card before rating your recall.");
+      return;
+    }
+
     setIsSubmitting(true);
     setReviewError(null);
 
@@ -29,7 +34,7 @@ export default function Flashcard({ front, back, topicId, onReviewSaved }: Flash
       const res = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId, score }),
+        body: JSON.stringify({ topicId, rating }),
       });
 
       const payload = (await res.json()) as {
@@ -50,6 +55,8 @@ export default function Flashcard({ front, back, topicId, onReviewSaved }: Flash
       if (payload.topic && onReviewSaved) {
         onReviewSaved(payload.topic);
       }
+
+      setIsFlipped(false);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to submit review";
       setReviewError(message);
@@ -101,22 +108,32 @@ export default function Flashcard({ front, back, topicId, onReviewSaved }: Flash
 
       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Score your recall (1-5)
+          Rate your recall (1-5)
         </p>
         <div className="grid grid-cols-5 gap-2">
-          {[1, 2, 3, 4, 5].map((score) => (
+          {[
+            { value: 1, label: "Again" },
+            { value: 2, label: "Hard" },
+            { value: 3, label: "Good" },
+            { value: 4, label: "Easy" },
+            { value: 5, label: "Very Easy" },
+          ].map((item) => (
             <button
-              key={score}
+              key={item.value}
               type="button"
-              onClick={() => submitReview(score)}
-              disabled={isSubmitting}
+              onClick={() => submitReview(item.value as 1 | 2 | 3 | 4 | 5)}
+              disabled={isSubmitting || !isFlipped}
               className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={`Submit review score ${score}`}
+              aria-label={`Submit review rating ${item.value}: ${item.label}`}
             >
-              {score}
+              <span className="block text-xs text-slate-500">{item.value}</span>
+              <span className="block text-sm">{item.label}</span>
             </button>
           ))}
         </div>
+        {!isFlipped && (
+          <p className="mt-2 text-xs text-slate-500">Flip the card to reveal the answer, then rate.</p>
+        )}
         {reviewError && <p className="mt-2 text-sm text-red-600">{reviewError}</p>}
       </div>
     </div>
