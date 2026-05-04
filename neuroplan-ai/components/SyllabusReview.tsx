@@ -2,29 +2,28 @@
 import { useState } from "react";
 import { Trash2, CheckCircle, BrainCircuit } from "lucide-react";
 import { SyllabusData } from "@/lib/validations/syllabus";
-import FlashcardPlayer from "@/components/FlashcardPlayer";
 
-type SavedTopic = {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: number;
+type Props = {
+  data: SyllabusData;
+  onSaved?: () => void;
 };
 
-type DeckCard = {
-  id: string;
-  topicId: string;
-  front: string;
-  back: string;
-};
+function difficultyBadgeClass(difficulty: number): string {
+  if (difficulty <= 2) return "bg-green-100 text-green-700 border border-green-200";
+  if (difficulty === 3) return "bg-yellow-100 text-yellow-700 border border-yellow-200";
+  return "bg-red-100 text-red-700 border border-red-200";
+}
 
-export default function SyllabusReview({ data }: { data: SyllabusData }) {
+function difficultyLabel(difficulty: number): string {
+  if (difficulty <= 2) return "Easy";
+  if (difficulty === 3) return "Medium";
+  return "Hard";
+}
+
+export default function SyllabusReview({ data, onSaved }: Props) {
   const [topics, setTopics] = useState(data.subjects);
   const [saving, setSaving] = useState(false);
-  const [savedTopics, setSavedTopics] = useState<SavedTopic[]>([]);
-  const [generatedCards, setGeneratedCards] = useState<DeckCard[]>([]);
-  const [generating, setGenerating] = useState(false);
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const removeTopic = (index: number) => {
@@ -55,13 +54,8 @@ export default function SyllabusReview({ data }: { data: SyllabusData }) {
         throw new Error(message);
       }
 
-      const payload = (await res.json()) as {
-        topics?: SavedTopic[];
-      };
-
-      setSavedTopics(Array.isArray(payload.topics) ? payload.topics : []);
-      setGeneratedCards([]);
-      setGenerationMessage("Syllabus saved. Generate flashcards to start Study Mode.");
+      setSaved(true);
+      onSaved?.();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to save syllabus topics.";
       setSaveError(message);
@@ -71,81 +65,24 @@ export default function SyllabusReview({ data }: { data: SyllabusData }) {
     }
   };
 
-  const generateDeck = async () => {
-    if (savedTopics.length === 0) {
-      setGenerationMessage("Save your topics first, then generate flashcards.");
-      return;
-    }
-
-    setGenerating(true);
-    setSaveError(null);
-    setGenerationMessage("Generating flashcards with Gemini...");
-
-    try {
-      const allCards: DeckCard[] = [];
-
-      for (const topic of savedTopics) {
-        const res = await fetch("/api/generate-cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topicId: topic.id }),
-        });
-
-        const payload = (await res.json()) as {
-          error?: string;
-          cards?: DeckCard[];
-        };
-
-        if (!res.ok) {
-          throw new Error(payload.error || `Failed to generate flashcards for ${topic.title}`);
-        }
-
-        if (Array.isArray(payload.cards)) {
-          allCards.push(...payload.cards);
-        }
-      }
-
-      setGeneratedCards(allCards);
-      setGenerationMessage(`Deck ready: ${allCards.length} cards generated across ${savedTopics.length} topics.`);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to generate flashcards.";
-      setGenerationMessage(message);
-      console.error(error);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   return (
     <div className="mt-8 space-y-6">
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
-          <h2 className="flex items-center gap-2 font-semibold text-slate-700">
-            <BrainCircuit size={20} className="text-blue-600" />
+        <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 flex flex-wrap justify-between items-center gap-3">
+          <h2 className="flex items-center gap-2 font-semibold text-white">
+            <BrainCircuit size={20} />
             Review AI Topics ({topics.length})
           </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={saveToDb}
-              type="button"
-              aria-label="Confirm and save syllabus topics"
-              disabled={saving || topics.length === 0}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all disabled:opacity-50"
-            >
-              <CheckCircle size={18} />
-              {saving ? "Saving..." : "Confirm & Save"}
-            </button>
-            <button
-              onClick={generateDeck}
-              type="button"
-              aria-label="Generate flashcards for saved topics"
-              disabled={generating || savedTopics.length === 0}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all disabled:opacity-50"
-            >
-              <BrainCircuit size={18} />
-              {generating ? "Generating..." : "Generate Flashcards"}
-            </button>
-          </div>
+          <button
+            onClick={saveToDb}
+            type="button"
+            aria-label="Confirm and save syllabus topics"
+            disabled={saving || topics.length === 0}
+            className="flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg transition-all disabled:opacity-50 font-medium"
+          >
+            <CheckCircle size={18} />
+            {saving ? "Saving..." : "Confirm & Save"}
+          </button>
         </div>
 
         <div className="divide-y divide-slate-100">
@@ -153,8 +90,8 @@ export default function SyllabusReview({ data }: { data: SyllabusData }) {
             <div key={idx} className="p-4 hover:bg-slate-50 flex justify-between items-start group">
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-blue-600 px-2 py-0.5 bg-blue-50 rounded">
-                    Diff: {topic.difficulty}
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${difficultyBadgeClass(topic.difficulty)}`}>
+                    {difficultyLabel(topic.difficulty)} ({topic.difficulty})
                   </span>
                   <h3 className="font-medium text-slate-900">{topic.title}</h3>
                 </div>
@@ -172,28 +109,22 @@ export default function SyllabusReview({ data }: { data: SyllabusData }) {
           ))}
         </div>
 
-        {(saveError || generationMessage) && (
+        {(saveError || saved) && (
           <div className="m-4 space-y-2">
             {saveError && (
               <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {saveError}
               </div>
             )}
-            {generationMessage && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-                {generationMessage}
+            {saved && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 flex items-center gap-2">
+                <CheckCircle size={16} />
+                Syllabus saved successfully!
               </div>
             )}
           </div>
         )}
       </div>
-
-      {generatedCards.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-lg font-semibold text-slate-800">Study Mode</h3>
-          <FlashcardPlayer cards={generatedCards} />
-        </div>
-      )}
     </div>
   );
 }
